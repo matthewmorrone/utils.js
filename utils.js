@@ -998,15 +998,14 @@ fs.define("isDir", function(path) {
   }
 })
 fs.define("setDir", function(handle) {
-  function ensureDirectoryExistence(filePath) {
-    let dirname = path.dirname(filePath);
-    if (fs.existsSync(dirname)) {
-      return true;
-    }
-    ensureDirectoryExistence(dirname);
-    fs.mkdirSync(dirname);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, {recursive: true});
   }
-  ensureDirectoryExistence(handle)
+})
+fs.define("clearDir", function(handle) {
+  if (fs.existsSync(dir)) {
+    fs.readdirSync(dir).forEach(f => fs.rmSync(`${dir}/${f}`));
+  }
 })
 fs.define("getFolder", function(path) {
   try {
