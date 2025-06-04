@@ -1,10 +1,1069 @@
+// starch-utils.js
+// This file merges all utility functions from starch/ and utils/ for easy inclusion in any project.
+// It includes extensions and helpers for Array, String, Number, Object, Date, Math, Function, and more.
+// Usage: include this file in your project to access all the merged utilities.
+
+// --- starch/number.js ---
+Number.prototype.define('isOdd', function isOdd(obj) {
+	return (obj % 2 === 1 || obj % 2 === -1)
+})
+Number.prototype.define('isEven', function isEven(obj) {
+	return obj % 2 === 0
+})
+Number.prototype.define('isInteger', function isInteger(obj) {
+	return obj % 1 === 0
+})
+Number.prototype.define('isFloat', function isFloat(obj) {
+	return obj % 1 !== 0
+})
+Number.prototype.define('isPositive', function isPositive(obj) {
+	return obj > 0
+})
+Number.prototype.define('isNegative', function isNegative(obj) {
+	return obj < 0
+})
+Number.prototype.define("isMultipleOf", function isMultipleOf(multiple) {
+	return this % multiple === 0
+})
+Number.prototype.define("isLuhn", function isLuhn(num) {
+	num = (num + '').split('').reverse()
+	var sum = 0,
+		i, digit
+	for (i = 0; i < num.length; i++) {
+		digit = parseInt(num[i], 10) * ((i + 1) % 2 ? 1 : 2)
+		sum += digit > 9 ? digit - 9 : digit
+	}
+	return (sum % 10) === 0
+})
+Number.prototype.define("base", function(b, c) {
+	var s = "",
+		n = this
+	if (b > (c = (c || "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz").length) || b < 2) {
+		return ""
+	}
+	while (n) {
+		s = c[n % b] + s, n = Math.floor(n / b)
+	}
+	return s
+})
+Number.prototype.define("abs", function() {
+	return Math.abs(this)
+})
+Number.prototype.base26 = (function() {
+	return function base26() {
+		n = this
+		ret = ""
+		while (parseInt(n) > 0) {
+			--n
+			ret += String.fromCharCode("A".charCodeAt(0) + (n % 26))
+			n /= 26
+		}
+		return ret.split("").reverse().join("")
+	}
+}())
+
+// --- starch/range.js ---
+function range(start, end, step) {
+	var range = []
+	var typeofStart = typeof start
+	var typeofEnd = typeof end
+
+	if (step === 0) {
+		throw TypeError("Step cannot be zero.")
+	}
+	if (typeofStart == "undefined" || typeofEnd == "undefined") {
+		throw TypeError("Must pass start and end arguments.")
+	} else if (typeofStart != typeofEnd) {
+		throw TypeError("Start and end arguments must be of same type." + typeofStart + typeofEnd)
+	}
+	typeof step == "undefined" && (step = 1)
+	if (end < start) {
+		step = -step
+	}
+	if (typeofStart == "number") {
+		while (step > 0 ? end >= start : end <= start) {
+			range.push(start);
+			start += step
+		}
+	} else if (typeofStart == "string") {
+		if (start.length != 1 || end.length != 1) {
+			throw TypeError("Only strings with one character are supported.")
+		}
+		start = start.charCodeAt(0)
+		end = end.charCodeAt(0)
+		while (step > 0 ? end >= start : end <= start) {
+			range.push(String.fromCharCode(start));
+			start += step
+		}
+	}
+	else {
+		throw TypeError("Only string and number types are supported")
+	}
+	return range
+}
+
+// --- starch/element.js ---
+Element.define("create", function(tag, arg) {
+	var elem = document.createElement(tag)
+	if (arg) {
+		var attrs = arg
+		for (var attr in attrs) {
+			elem.setAttribute([attr], attrs[attr])
+		}
+	}
+	return elem
+})
+window.define("create", Element.create)
+Element.prototype.define("inner", function() {
+	if (arguments.length === 0) {
+		return this.innerHTML
+	}
+	this.innerHTML = arguments[0]
+	return this
+})
+Element.prototype.define("replaceWith", function(newNode) {
+	return this.parentNode.replaceChild(newNode, this)
+})
+Element.prototype.define("before", function(htmlString) {
+	return this.insertAdjacentHTML('beforebegin', htmlString)
+})
+Element.prototype.define("after", function(htmlString) {
+	return this.insertAdjacentHTML('afterend', htmlString)
+})
+Element.prototype.define("append", function(htmlString) {
+	return this.insertAdjacentHTML('beforeend', htmlString)
+})
+Element.prototype.define("prepend", function(htmlString) {
+	log(htmlString)
+	return this.insertAdjacentHTML('afterbegin', htmlString)
+})
+Element.prototype.define("hide", function() {
+	this.style.display = 'none'
+	return this
+})
+Element.prototype.define("show", function() {
+	this.style.display = ''
+	return this
+})
+
+// --- starch/is.js ---
+Object.prototype.define('isObject', function(obj, strict) {
+	if (strict) {
+		return typeof obj === 'object' && !isNull(obj) && !isArray(obj) && !isDate(obj)
+	}
+	return Object.prototype.toString.call(obj) === '[object Object]' && obj !== void 0
+})
+
+// --- starch/util.js ---
+(function() {
+	if (typeof module != "undefined" && typeof module.exports != "undefined") {
+		module.exports = {};
+	}
+	for (c in console) {
+		if (c === "memory") {
+			continue
+		}
+		eval(c + " = console." + c + ".bind(console)")
+	}
+	function Nihil() {}
+	Nihil.prototype = Object.create(null)
+	window.$_GET = function(name) {
+		if (!name) {
+			return new Url(window.location.href).queryPairs;
+		}
+		var nameEQ = name + '=',
+			url = window.location.href,
+			pos = url.indexOf('?'),
+			url = url.slice(pos + 1),
+			arr = url.split('&'),
+			i = 0,
+			pair = '',
+			arrl = arr.length;
+		for (i = 0; i < arrl; i++) {
+			var pair = arr[i];
+			if (pair.indexOf(nameEQ) === 0) {
+				return decodeURIComponent(pair.slice(nameEQ.length).replace(/\+/g, '%20'));
+			}
+		}
+		return null;
+	}
+	function loadCSS(href, tag, n) {
+		"use strict"
+		var link = window.document.createElement("link")
+		var script = tag || window.document.getElementsByTagName("script")[0]
+		link.rel = "stylesheet"
+		link.href = href
+		link.media = "only x"
+		script.parentNode.insertBefore(link, script)
+		setTimeout(function() {
+			link.media = n || "all"
+		})
+	}
+	window.nativeAlert = window.alert
+	window.alert = function() {
+		return window.nativeAlert(Array.prototype.slice.call(arguments).join(", "))
+	}
+	window.onerror = function(msg, url, line) {
+		window.nativeAlert("Message: " + msg, "\nurl: " + url, "\nLine Number: " + line)
+	}
+	window.connect = function(a) {
+		if (a == true) {
+			window.addEventListener("offline", function(e) {
+				alert("offline")
+			}, false)
+			window.addEventListener("online", function(e) {
+				alert("online")
+			}, false)
+		}
+		return window.navigator.onLine
+	}
+	window.js = function(a) {
+		window.navigator.javaEnabled(a);
+		return window.navigator.javaEnabled()
+	}
+	window.taint = function(a) {
+		window.navigator.taintEnabled(a);
+		return window.navigator.taintEnabled()
+	}
+	window.title = function() {
+		document.title(Array.prototype.slice.call(arguments).join(", "))
+	}
+	window.video = function() {
+		return !!document.createel('video').canPlayType
+	}
+	window.empty = function(a) {
+		return !(typeof a === "undefined")
+	}
+	window.type = function(input) {
+		if (input instanceof String) {
+			return "String"
+		}
+		if (input instanceof Number) {
+			return "Number"
+		}
+		if (input instanceof Boolean) {
+			return "Boolean"
+		}
+		if (input instanceof Object) {
+			return "Object"
+		}
+		if (input instanceof Array) {
+			return "Array"
+		}
+		return typeof input
+	}
+	window.url = function() {
+		return window.location.pathname
+	}
+	window.goto = function(url) {
+		window.location.href = url
+	}
+	window.getWindowCoords = (navigator.userAgent.toLowerCase().indexOf('opera') > 0 || navigator.appVersion.toLowerCase().indexOf('safari') != -1) ? function() {
+		canvasX = window.innerWidth;
+		canvasY = window.innerHeight;
+	} : function() {
+		canvasX = document.documentElement.clientWidth || document.body.clientWidth || document.body.scrollWidth;
+		canvasY = document.documentElement.clientHeight || document.body.clientHeight || document.body.scrollHeight;
+	}
+	window.onresize = window.getWindowCoords
+	window.apiload = function() {
+		$("head").append('<script src="http://www.google.com/jsapi" type="text/javascript"></script>')
+		google.load('jquery', '1.9.1')
+		google.load('jqueryui', '1.5.3')
+	}
+	function isLessThanIE(version) {
+		if (navigator.appName === 'Microsoft Internet Explorer') {
+			var ua = navigator.userAgent,
+				re = new RegExp("MSIE ([0-9]{1,}[\.0-9]{0,})")
+			if (re.exec(ua) !== null) {
+				if (parseFloat(RegExp.$1) < version) {
+					return true
+				}
+			}
+		}
+		return false
+	}
+	function insertAtCursor(myField, myValue) {
+		if (document.selection) {
+			myField.focus()
+			sel = document.selection.createRange()
+			sel.text = myValue
+		}
+		else if (myField.selectionStart || myField.selectionStart == '0') {
+			var startPos = myField.selectionStart
+			var endPos = myField.selectionEnd
+			restoreTop = myField.scrollTop
+			myField.value = myField.value.substring(0, startPos) + myValue + myField.value.substring(endPos, myField.value.length)
+			myField.selectionStart = startPos + myValue.length
+			myField.selectionEnd = startPos + myValue.length
+			if (restoreTop > 0) {
+				myField.scrollTop = restoreTop
+			}
+		}
+		else {
+			myField.value += myValue
+		}
+	}
+})()
+
+// --- starch/Cookie.js ---
+function Cookie() {
+	this.get = function(name) {
+		var i, x, y, ARRcookies = document.cookie.split(";")
+		for (i = 0; i < ARRcookies.length; i++) {
+			x = ARRcookies[i].substr(0, ARRcookies[i].indexOf("="))
+			y = ARRcookies[i].substr(ARRcookies[i].indexOf("=") + 1)
+			x = x.replace(/^\s+|\s+$/g, "")
+			if (x == name) {
+				return unescape(y)
+			}
+		}
+	}
+	this.set = function(name, value, exdays) {
+		var exdate = new Date()
+		exdate.setDate(exdate.getDate() + exdays)
+		var cvalue = escape(value) + ((exdays == null) ? "" : "; expires=" + exdate.toUTCString())
+		document.cookie = name + "=" + cvalue
+	}
+	this.unset = function(name) {
+		setCookie(name, "", -1)
+		return name
+	}
+	this.clear = function() {
+		var cookies = document.cookie.split(";")
+		for (var i = 0; i < cookies.length; i++) {
+			unsetCookie(cookies[i].split("=")[0])
+		}
+	}
+}
+
+// --- starch/$.util.js ---
+if (!jQuery) {
+	var jq = document.createElement('script')
+	jq.src = "https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"
+	document.getElementsByTagName('head')[0].appendChild(jq)
+}
+(function($) {
+	$.file_get_contents = function(address) {
+		return $.ajax({
+			url: address,
+			async: false
+		}).responseText
+	}
+	$.uppercase = function(input) {
+		if (typeof input !== "string" || !input) {
+			return null;
+		}
+		return input.toUpperCase()
+	}
+	$.lowercase = function(input) {
+		if (typeof input !== "string" || !input) {
+			return null;
+		}
+		return input.toLowerCase()
+	}
+	$.capitalize = function(input) {
+		if (typeof input !== "string" || !input) {
+			return null;
+		}
+		return input.charAt(0).toUpperCase() + input.slice(1).toLowerCase()
+	}
+	$.chomp = function(input, offset) {
+		if (typeof input !== "string" || !input) {
+			return null;
+		}
+		return input.substring(0, input.length - offset)
+	}
+	$.title = function(input) {
+		if (arguments.length == 0) {
+			return $("title").html()
+		}
+		$("title").html(input)
+	}
+	$.fn.repeat = function(input, n) {
+		var result = ""
+		for (var i = 0; i < n; i++) {
+			result += input
+		}
+		return result
+	}
+})(jQuery)
+
+// --- starch/file.js ---
+function file_exists(url) {
+	if (url) {
+		var req = new XMLHttpRequest();
+		req.open('GET', url, false);
+		req.send();
+		return req.status == 200;
+	}
+	else {
+		return false;
+	}
+}
+function file_get_contents(url) {
+	if (url) {
+		var req = new XMLHttpRequest();
+		req.open('GET', url, false);
+		req.send();
+		return req.responseText;
+	}
+	else {
+		return false;
+	}
+}
+function file(url) {
+	if (url) {
+		var req = new XMLHttpRequest();
+		req.open('GET', url, false);
+		req.send();
+		return req.responseText.split("\n");
+	}
+	else {
+		return false;
+	}
+}
+
+// --- starch/Date.js ---
+Date.define("getMonthNumberFromName", function(name) {
+	var n = Date.CultureInfo.monthNames,
+		m = Date.CultureInfo.abbreviatedMonthNames,
+		s = name.toLowerCase();
+	for (var i = 0; i < n.length; i++) {
+		if (n[i].toLowerCase() == s || m[i].toLowerCase() == s) {
+			return i;
+		}
+	}
+	return -1;
+})
+Date.define("getDayNumberFromName", function(name) {
+	var n = Date.CultureInfo.dayNames,
+		m = Date.CultureInfo.abbreviatedDayNames,
+		o = Date.CultureInfo.shortestDayNames,
+		s = name.toLowerCase();
+	for (var i = 0; i < n.length; i++) {
+		if (n[i].toLowerCase() == s || m[i].toLowerCase() == s) {
+			return i;
+		}
+	}
+	return -1;
+})
+Date.define("isLeapYear", function(year) {
+	return (((year % 4 === 0) && (year % 100 !== 0)) || (year % 400 === 0));
+})
+Date.define("getDaysInMonth", function(year, month) {
+	return [31, (Date.isLeapYear(year) ? 29 : 28), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month];
+})
+Date.define("getTimezoneOffset", function(s, dst) {
+	return (dst || false) ? Date.CultureInfo.abbreviatedTimeZoneDST[s.toUpperCase()] : Date.CultureInfo.abbreviatedTimeZoneStandard[s.toUpperCase()];
+})
+Date.define("getTimezoneAbbreviation", function(offset, dst) {
+	var n = (dst || false) ? Date.CultureInfo.abbreviatedTimeZoneDST : Date.CultureInfo.abbreviatedTimeZoneStandard,
+		p;
+	for (p in n) {
+		if (n[p] === offset) {
+			return p;
+		}
+	}
+	return null;
+})
+Date.define("now", function() {
+	return new Date();
+})
+Date.define("today", function() {
+	return Date.now().clearTime();
+})
+
+// --- starch/Canvas.js ---
+function Canvas() {
+	this.canvas = create("canvas")
+	this.canvas.width = this.width = 100
+	this.canvas.height = this.height = 100
+	this.context = this.canvas.getContext("2d")
+	this.c = this.context
+	return this
+}
+Canvas.prototype.clear = function() {
+	this.c.clearRect(0, 0, this.width, this.height)
+	return this
+}
+Canvas.prototype.line = function(x1, y1, x2, y2, color, width) {
+	if (x1.isArray()) {
+		color = y1 || "black"
+		width = x2 || 5
+		y1 = x1.y1
+		x2 = x1.x2
+		y2 = x1.y2
+		x1 = x1.x1
+	}
+	this.c.beginPath()
+	this.c.moveTo(x1, y1)
+	this.c.lineTo(x2, y2)
+	this.c.strokeStyle = color || "black"
+	this.c.lineWidth = width || 5
+	this.c.stroke()
+	this.c.closePath()
+	return this
+}
+Canvas.prototype.square = function(x, y, e, w, color, fill) {
+	if (color == '') {
+		color = 'rgba(0, 0, 0, 0)'
+	}
+	this.c.beginPath()
+	this.c.rect(x, y, e, e)
+	this.c.lineWidth = w
+	this.c.strokeStyle = color
+	this.c.stroke()
+	if (fill) {
+		this.c.fillStyle = fill
+		this.c.fillRect(x, y, e, e)
+	}
+	return this
+}
+
+// --- starch/function.js ---
+Function.prototype.define("repeat", function(n) {
+	n = n || 2
+	var m = 0,
+		p = "",
+		r = ""
+	while (m < n) {
+		p = 0
+		p = "" + this.call()
+		if (p) {
+			r += p
+		}
+		m++
+	}
+	return "" + r
+})
+Function.prototype.define("proxy", function() {
+	this.apply(context, arguments.slice(1))
+})
+Function.prototype.define("iter", function() {
+	var internal = 0
+	return function() {
+		internal++
+		return internal.base(26)
+	}
+})
+
+// --- starch/Math.js ---
+function comp_sum(array) {
+	var sum = 0
+	for (i in array) {
+		sum += parseInt(array[i])
+	}
+	return sum
+}
+function comp_ave(array) {
+	var ave = comp_sum(array) / array.length
+	return ave
+}
+function comp_dev(array) {
+	var mean = comp_ave(array)
+	var dev = 0
+	for (i in array) {
+		array[i] = (array[i] - mean)
+	}
+	for (i in array) {
+		array[i] = (array[i] * array[i])
+	}
+	for (i in array) {
+		dev += array[i]
+	}
+	dev /= (array.length - 1)
+	dev = Math.sqrt(dev)
+	return dev
+}
+function get_r(xs, ys, xbar, ybar, sdx, sdy) {
+	var xy = 0
+	for (var j = 0; j < xs.length; j++) {
+		xs[j] = parseFloat(xs[j])
+		ys[j] = parseFloat(ys[j])
+		xy += (xs[j] - xbar) * (ys[j] - ybar)
+	}
+	corr = Math.round(1 / (xs.length - 1) * xy / (sdx * sdy) * 10000) / 10000
+	return corr
+}
+function least_squares(twodarray) {
+	var ave = []
+	for (var j = 0; j < twodarray[0].length; j++) {
+		aver = []
+		for (var i = 0; i < twodarray.length; i++) {
+			aver.push(twodarray[i][j])
+		}
+		ave.push(aver)
+	}
+	var xbar = comp_ave(ave[0].slice())
+	var ybar = comp_ave(ave[1].slice())
+	var sdx = comp_dev(ave[0].slice())
+	var sdy = comp_dev(ave[1].slice())
+	var r = get_r(ave[0].slice(), ave[1].slice(), xbar, ybar, sdx, sdy)
+	var b = r * (sdy / sdx)
+	var a = ybar - (b * xbar)
+	return [a, b].slice()
+}
+function convert(src, srcAlphabet, dstAlphabet, caps) {
+	alphabet = "0123456789abcdefghijklmnopqrstuvwxyz"
+	if (caps == true) {
+		alphabet = alphabet.toUpperCase()
+	}
+	if (typeof src === "number") {
+		src = String(src)
+	}
+	if (typeof srcAlphabet !== typeof dstAlphabet) {
+		TypeError("Alphabet types don't match. ")
+	}
+	if (typeof srcAlphabet === "number") {
+		var srcBase = srcAlphabet
+		var dstBase = dstAlphabet
+		srcAlphabet = alphabet.substring(0, srcBase)
+		dstAlphabet = alphabet.substring(0, dstBase)
+	}
+	if (typeof srcAlphabet === "string") {
+		var srcBase = srcAlphabet.length
+		var dstBase = dstAlphabet.length
+	}
+	var wet = src,
+		val = 0,
+		mlt = 1
+	while (wet.length > 0) {
+		var digit = wet.charAt(wet.length - 1)
+		val += mlt * srcAlphabet.indexOf(digit)
+		wet = wet.substring(0, wet.length - 1)
+		mlt *= srcBase
+	}
+	wet = val
+	var ret = ""
+	while (wet >= dstBase) {
+		var digitVal = wet % dstBase
+		var digit = dstAlphabet.charAt(digitVal)
+		ret = digit + ret
+		wet /= dstBase
+	}
+	var digit = dstAlphabet.charAt(wet)
+	return digit + ret
+}
+function base26(value) {
+	var converted = ""
+	var iteration = false
+	do {
+		var remainder = value % 26 + 1
+		if (iteration == false && value < 26) {
+			remainder--
+		}
+		converted = String.fromCharCode(64 + remainder) + converted
+		value = (value - remainder) / 26
+		iteration = true
+	}
+	while (value > 0)
+	return converted
+}
+
+// --- starch/String.js ---
+String.prototype.define('parse', function(reviver) {
+  return JSON.parse(this, reviver);
+})
+String.define("random", function(len) {
+  var text = "";
+  var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  for (var i = 0; i < len; i++) {
+    text += possible.charAt(Math.floor(Math.random() * possible.length));
+  }
+  return text
+})
+String.define("format", function(format) {
+  var args = Array.prototype.slice.call(arguments, 1)
+  return format.replace(/{(\d+)}/g, function(match, number) {
+    return typeof args[number] != 'undefined' ? args[number] : match
+  })
+})
+String.prototype.define("format", function() {
+  var args = arguments
+  return this.replace(/{(\d+)}/g, function(match, number) {
+    return typeof args[number] != 'undefined' ? args[number] : match
+  })
+})
+
+// --- starch/Array.js ---
+Array.define("fill", function(n) {
+	return Array.apply(null, Array(n)).map(function(_, i) {
+		return i
+	})
+})
+Array.prototype.define("each", Array.prototype.forEach)
+Array.prototype.define('remove', function(obj) {
+	var i = this.indexOf(obj)
+	if (~i) {
+		return this.splice(i, 1)[0]
+	}
+	else {
+		return false
+	}
+})
+Array.prototype.define('removeAll', function(obj) {
+	var removed = []
+	while (true) {
+		var i = this.indexOf(obj)
+		if (~i) {
+			removed[removed.length] = this.splice(i, 1)
+		}
+		else {
+			break
+		}
+	}
+	return removed
+})
+Array.prototype.define('contains', function(obj) {
+	var i = this.indexOf(obj)
+	return !!~i;
+})
+Array.prototype.define('toString', function() {
+	return this.join(", ")
+})
+Array.prototype.define("pick", function() {
+	return this[Math.floor((Math.random() * this.length))];
+})
+Array.prototype.define("randomize", function() {
+	return this.sort(function() {
+		return (Math.round(Math.random()) - 0.5)
+	});
+})
+Array.prototype.define("shuffle", function() {
+	var i = this.length, j, temp
+	if (i == 0) {
+		return
+	}
+	while (--i) {
+		j = Math.floor(Math.random() * (i + 1))
+		temp = this[i]
+		this[i] = this[j]
+		this[j] = temp
+	}
+	return this
+})
+
+// --- starch/Color.js ---
+Color = Object.create(Object.prototype)
+Color.define("random", function() {
+	return "rgb(" + (Math.random() * 100) + "%, " + (Math.random() * 100) + "%, " + (Math.random() * 100) + "%)"
+})
+function Color(r, g, b, a) {
+	if (!a) {
+		a = 1
+	}
+	this.r = r
+	this.g = g
+	this.b = b
+	this.a = a
+	this.rgb = function() {
+		return "rgb(" + this.r + ", " + this.g + ", " + this.b + ")"
+	}
+	this.rgba = function() {
+		return "rgba(" + this.r + ", " + this.g + ", " + this.b + ", " + this.a + ")"
+	}
+	this.rgb2hex = function(r, g, b) {
+		var hex = [r.toString(16), g.toString(16), b.toString(16)]
+		$.each(hex, function(nr, val) {
+			if (val.length === 1) {
+				hex[nr] = "0" + val;
+			}
+		})
+		return hex.join("").toUpperCase()
+	}
+	this.hex2rgb = function(hex) {
+		R = hexToR(hex);
+		G = hexToG(hex);
+		B = hexToB(hex);
+		return "rgb(" + R + ", " + G + ", " + B + ")"
+	}
+	function hexToR(h) {
+		return parseInt((cutHex(h)).substring(0, 2), 16)
+	}
+	function hexToG(h) {
+		return parseInt((cutHex(h)).substring(2, 4), 16)
+	}
+	function hexToB(h) {
+		return parseInt((cutHex(h)).substring(4, 6), 16)
+	}
+	function cutHex(h) {
+		return (h.charAt(0) == "#") ? h.substring(1, 7) : h
+	}
+	this.random = function(a) {
+		if (a == "hex") {
+			var letters = '0123456789ABCDEF'.split('')
+			var color = '#'
+			for (var i = 0; i < 6; i++) {
+				color += letters[Math.round(Math.random() * 15)]
+			}
+			return color
+		}
+		if (a == "rgb") {
+			return "rgb(" + randomnumber(0, 255, 0) + ", " + randomnumber(0, 255, 0) + ", " + randomnumber(0, 255, 0) + ")"
+		}
+		if (a == "rgba") {
+			return "rgba(" + randomnumber(0, 255, 0) + ", " + randomnumber(0, 255, 0) + ", " + randomnumber(0, 255, 0) + ", " + alpha + ")"
+		}
+	}
+}
+
+// --- starch/object.js ---
+Object.defineProperty(Object.prototype, "define", {
+	configurable: true,
+	enumerable: false,
+	writable: true,
+	value: function(name, value) {
+		if (Object[name]) {
+			delete Object[name]
+		}
+		Object.defineProperty(this, name, {
+			configurable: true,
+			enumerable: false,
+			writable: true,
+			value: value
+		})
+		return this
+	}
+})
+Object.prototype.define("extend", function(src) {
+	var target = this
+	if (isObject(src)) {
+		for (var o in src) {
+			if (Object[src[o]]) {
+				delete Object[src[o]]
+			}
+			this.define(o, src[o])
+		}
+	}
+	return this
+})
+Object.define("setPrototypeOf", function(obj, proto) {
+	obj.__proto__ = proto
+	return obj
+})
+Object.prototype.define("setPrototypeOf", function(obj, proto) {
+	obj.__proto__ = proto
+	return obj
+})
+Object.prototype.extend({
+	"hasProperty": function(a) {
+		return Object.hasOwnProperty(this, a)
+	},
+	"getPropertyName": function(a) {
+		return Object.getOwnPropertyName(this, a)
+	},
+	"getPropertyNames": function() {
+		return Object.getOwnPropertyNames(this)
+	},
+	"getPropertyDescriptor": function(a) {
+		return Object.getOwnPropertyDescriptor(this, a)
+	},
+	"getPropertyDescriptors": function() {
+		var result = {}
+		Object.getOwnPropertyNames(this).each(function(a, b) {
+			result[a] = Object.getOwnPropertyDescriptor(this, a)
+		}, this)
+		return result
+	},
+	"each": function(f) {
+		for (var i in this) {
+			f && this.hasProperty(i) && f.call(this, this[i], i)
+		}
+		return this
+	}
+})
+Object.prototype.define("eachOwn", function(fn) {
+	var o = this
+	Object.keys(o).each(function(key) {
+		fn.call(o, o[key], key)
+	})
+})
+Object.prototype.define("forEach", function(callback, scope) {
+	var collection = this
+	if (Object.prototype.toString.call(collection) === '[object Object]') {
+		for (var prop in collection) {
+			if (Object.prototype.hasOwnProperty.call(collection, prop)) {
+				callback.call(scope, collection[prop], prop, collection)
+			}
+		}
+	}
+	else {
+		for (var i = 0, len = collection.length; i < len; i++) {
+			callback.call(scope, collection[i], i, collection)
+		}
+	}
+})
+Object.prototype.define("assign", function(...sources) {
+	var target = this
+	sources.forEach(source => {
+		var descriptors = Object.keys(source).reduce((descriptors, key) => {
+			descriptors[key] = Object.getOwnPropertyDescriptor(source, key)
+			return descriptors;
+		}, {})
+		Object.getOwnPropertySymbols(source).forEach(sym => {
+			var descriptor = Object.getOwnPropertyDescriptor(source, sym)
+			if (descriptor.enumerable) {
+				descriptors[sym] = descriptor
+			}
+		})
+		Object.defineProperties(target, descriptors)
+	})
+	return target;
+})
+Object.prototype.define("map", function(fn, ctx) {
+	var ctx = ctx || this,
+		self = this,
+		result = {}
+	Object.keys(self).each(function(v, k) {
+		result[k] = fn.call(ctx, self[k], k, self)
+	})
+	return result
+})
+Object.define('clone', function(obj) {
+	if (Array.isArray(obj)) {
+		result = []
+	}
+	else {
+		var result = {};
+	}
+	for (var key in obj) {
+		var val = obj[key];
+		if (Array.isArray(val)) {
+			result[key] = Object.clone(val.slice());
+		}
+		else if (val === null) {
+			result[key] = val;
+		}
+		else if (val === undefined) {
+			continue;
+		}
+		else if (typeof val === "object") {
+			result[key] = Object.clone(val);
+		}
+		else {
+			result[key] = val;
+		}
+	}
+	return result;
+})
+Object.prototype.define("clone", function() {
+	return JSON.parse(JSON.stringify(this))
+})
+Object.define('merge', function(target, obj) {
+	for (var key in obj) {
+		var next = obj[key];
+		var current = target[key];
+		if (Array.isArray(next)) {
+			target[key] = Object.clone(next.slice());
+		}
+		else if (next === null) {
+			target[key] = next;
+		}
+		else if (next === undefined) {
+			continue;
+		}
+		else if (typeof next === 'object') {
+			if (current === null) {
+				current = Object.clone(next);
+			}
+			else if (typeof current === 'object') {
+				current.absorb(next);
+			}
+			else if (current === undefined) {
+				current = Object.clone(next);
+			}
+		}
+		else {
+			target[key] = next;
+		}
+	}
+	return target;
+})
+Object.prototype.define('stringify', function(replacer, space) {
+	return JSON.stringify(this, replacer, space);
+})
+Object.prototype.define("type", function() {
+	var x = this
+	if (x === null) {
+		return 'Null'
+	}
+	if (x === undefined) {
+		return 'Undefined'
+	}
+	var type = x.toString()
+	return type.slice(type.indexOf(' ' + 1), -1)
+})
+Object.prototype.define("log", function() {
+	return log(this)
+})
+Object.prototype.define("size", function() {
+	return this.length || Object.keys(this).length
+})
+Object.prototype.define("str", function() {
+	return JSON.stringify(this)
+})
+Object.prototype.define("toInt", function() {
+	return parseInt(this, (arguments[0] || 10))
+})
+Object.prototype.define("values", function() {
+	var keys = Object.keys(this)
+	var ret = []
+	for (var i = 0; i < keys.length; i++) {
+		ret.push(this[keys[i]])
+	}
+	return ret
+})
+
+// --- starch/random.js ---
+Object.prototype.define("pick", function() {
+	var keys = Object.keys();
+	return this[keys[Math.floor((Math.random() * keys.length))]];
+})
+function randomNumber(min, max, round) {
+	result = (Math.random() * max) + min
+	result *= Math.pow(10, round)
+	result = Math.round(result)
+	result /= Math.pow(10, round)
+	return result
+}
+var Random = function Random() {}
+var nativeRandom = Math.random;
+var nativeRandom = Math.random
+Math.random = function(min, max, round, mt) {
+	if (arguments.length === 0) {
+		return nativeRandom()
+	}
+	if (!round) {
+		round = 1
+	}
+	if (!max) {
+		var max = min
+		min = 1
+	}
+	if (mt) {
+		min = parseInt(min, 10)
+		max = parseInt(max, 10)
+	}
+	return Math.floor(nativeRandom() * (max - min + 1)) + min
+}
+Math.random.range = function(min, max) {
+	'use strict';
+	min = parseFloat(min) || 0;
+	max = parseFloat(max) || 0;
+	return Math.floor(Math.random() * (max - min + 1)) + min
+}
+Random.prototype.define("boolean", function() {
+	return Math.random() >= 0.5;
+})
+
+// --- utils/utils.js ---
 "use strict"
 const fs = require('fs')
 const https = require("https")
 const url = require("url")
 const path = require('path')
 const args = process.argv.slice(2)
-
 Object.defineProperty(Object.prototype, "define", {
   writable:     false,
   enumerable:   false,
@@ -60,972 +1119,51 @@ Object.prototype.define("inherits", function(Parent) {
   Child.prototype = new T()
   return Child.prototype
 })
-Object.prototype.define("extend", function(src) {
-  for(let i in src) {
-    if (Object.prototype.hasOwnProperty(src, i)) {
-      this[i] = src[i]
-    }
-  }
-})
-Object.prototype.define("getPropertyNames", function() {
-  return Object.getOwnPropertyNames(this)
-})
-Object.prototype.define("copy", function() {
-  let obj = this
-  const copy = Object.create(Object.getPrototypeOf(obj))
-  const propNames = Object.getOwnPropertyNames(obj)
-  
-  propNames.forEach(function(name) {
-    const desc = Object.getOwnPropertyDescriptor(obj, name)
-    Object.defineProperty(copy, name, desc)
-  })
-  return copy
-})
-Object.prototype.define("fastProps", function() {
-  function FakeConstructor() {}
-  FakeConstructor.prototype = this
-  let l = 8
-  while(l--) {
-    new FakeConstructor()
-  }
-  return this
-  eval(this)
-})
-Object.prototype.define("merge", function(source, options) {
-  let target = this
-  if (!source) {
-    return target
-  }
-  if (typeof source !== 'object') {
-    if (Array.isArray(target)) {
-      target.push(source)
-    }
-    else if (typeof target === 'object') {
-      if (options.plainObjects || options.allowPrototypes || !has.call(Object.prototype, source)) {
-        target[source] = true
-      }
-    }
-    else {
-      return [target, source]
-    }
-    return target
-  }
-  if (typeof target !== 'object') {
-    return [target].concat(source)
-  }
-  let mergeTarget = target
-  if (Array.isArray(target) && !Array.isArray(source)) {
-    mergeTarget = exports.arrayToObject(target, options)
-  }
-  if (Array.isArray(target) && Array.isArray(source)) {
-    source.forEach(function(item, i) {
-      if (has.call(target, i)) {
-        if (target[i] && typeof target[i] === 'object') {
-          target[i] = exports.merge(target[i], item, options)
-        }
-        else {
-          target.push(item)
-        }
-      }
-      else {
-        target[i] = item
-      }
+
+// --- utils/utils-2.js ---
+"use strict"
+if (!jQuery) {
+    let jq = document.createElement('script')
+    jq.src = "https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"
+    document.getElementsByTagName('head')[0].appendChild(jq)
+}
+function Nihil() { }
+Nihil.prototype = Object.create(null)
+function isObject(object) {
+    let type = typeof object
+    return type === 'function' || type === 'object' && !!object
+}
+let nativeAlert = window.alert
+window.alert = function() {
+    return nativeAlert(arguments.join("\n"))
+}
+function loadCSS(e, t, n) {
+    "use strict"
+    let i = window.document.createElement("link")
+    let o = t || window.document.getElementsByTagName("script")[0]
+    i.rel = "stylesheet"
+    i.href = e
+    i.media = "only x"
+    o.parentNode.insertBefore(i, o)
+    setTimeout(function() {
+        i.media = n || "all"
     })
-    return target
-  }
-  return Object.keys(source).reduce(function(acc, key) {
-    let value = source[key]
-    if (has.call(acc, key)) {
-      acc[key] = exports.merge(acc[key], value, options)
-    }
-    else {
-      acc[key] = value
-    }
-    return acc
-  }, mergeTarget)
-})
-Array.prototype.define("merge", function(b) {
-  return {...this, ...b}
-})
-Array.define("merge", function(a, b) {
-  return {...a, ...b}
-})
-Array.prototype.define("unique", function() {
-  return [...new Set(this)] // Array.from(new Set(this))
-})
-Array.prototype.define("superset", function(subset) {
-  for(let elem of subset) {
-    if (!this.has(elem)) {
-      return false
-    }
-  }
-  return true
-})
-Array.prototype.define("union", function(setB) {
-  let _union = new Set(this)
-  for(let elem of setB) {
-    _union.add(elem)
-  }
-  return _union
-})
-Array.prototype.define("intersection", function intersection(setB) {
-  let _intersection = new Set()
-  for(let elem of setB) {
-    if (this.has(elem)) {
-      _intersection.add(elem)
-    }
-  }
-  return _intersection
-})
-Array.prototype.define("symmetricDifference", function(arrB) {
-  let setB = new Set(arrB)
-  let _difference = new Set(this)
-  for(let elem of setB) {
-    if (_difference.has(elem)) {
-      _difference.delete(elem)
-    }
-    else {
-      _difference.add(elem)
-    }
-  }
-  return Array.from(_difference)
-})
-Array.prototype.define("difference", function(arrB) {
-  let setB = new Set(arrB)
-  let _difference = new Set(this)
-  for(let elem of setB) {
-    _difference.delete(elem)
-  }
-  return Array.from(_difference)
-})
-Array.prototype.define("flat", function(depth) {
-  let flattened = [];
-  (function flat(array, depth) {
-    for (let el of array) {
-      if (Array.isArray(el) && depth > 0) {
-        flat(el, depth - 1); 
-      } 
-      else {
-        flattened.push(el);
-      }
-    }
-  })(this, Math.floor(depth) || 1);
-  return flattened;
-})
-Array.prototype.define("copyWithin", function(target, start/*, end*/) {
-  // Steps 1-2.
-  if (this == null) {
-    throw new TypeError('this is null or not defined');
-  }
-
-  let O = Object(this);
-
-  // Steps 3-5.
-  let len = O.length >>> 0;
-
-  // Steps 6-8.
-  let relativeTarget = target >> 0;
-
-  let to = relativeTarget < 0 ?
-    Math.max(len + relativeTarget, 0) :
-    Math.min(relativeTarget, len);
-
-  // Steps 9-11.
-  let relativeStart = start >> 0;
-
-  let from = relativeStart < 0 ?
-    Math.max(len + relativeStart, 0) :
-    Math.min(relativeStart, len);
-
-  // Steps 12-14.
-  let end = arguments[2];
-  let relativeEnd = end === undefined ? len : end >> 0;
-
-  let final = relativeEnd < 0 ?
-    Math.max(len + relativeEnd, 0) :
-    Math.min(relativeEnd, len);
-
-  // Step 15.
-  let count = Math.min(final - from, len - to);
-
-  // Steps 16-17.
-  let direction = 1;
-
-  if (from < to && to < (from + count)) {
-    direction = -1;
-    from += count - 1;
-    to += count - 1;
-  }
-
-  // Step 18.
-  while (count > 0) {
-    if (from in O) {
-      O[to] = O[from];
-    } else {
-      delete O[to];
-    }
-
-    from += direction;
-    to += direction;
-    count--;
-  }
-
-  // Step 19.
-  return O;
-});
-Object.prototype.define("log", function() {
-  console.log(this)
-})
-Array.prototype.define("log", function() {
-  this.each(el => console.log(el))
-})
-Array.prototype.define("first", {
-  enumerable: false,
-  configurable: true,
-  get: function() {
-    return this[0];
-  },
-  set: function(a) {
-    this[0] = a;
-    return this;
-  }
-}); 
-Array.prototype.define("start", {
-  enumerable: false,
-  configurable: true,
-  get: function() {
-    return 0;
-  }
-}); 
-Array.prototype.define("end", {
-  enumerable: false,
-  configurable: true,
-  get: function() {
-    return this.length-1;
-  }
-}); 
-Array.prototype.define("last", {
-  enumerable: false,
-  configurable: true,
-  get: function() {
-    return this.length-1;
-  }
-}); 
-let Is = Object.create({})
-Is.define("primitive", function(arg) {
-  return arg === null
-  || typeof arg === 'boolean' 
-  || typeof arg === 'number' 
-  || typeof arg === 'string' 
-  || typeof arg === 'symbol' 
-  || typeof arg === 'undefined'
-})
-Is.define("object", function(arg) {
-  return typeof arg === "function" || typeof arg === 'object' && arg !== null
-})
-Is.define("error", function(e) {
-  return Object.prototype.toString.call(e) === '[object Error]' || e instanceof Error
-})
-Is.define("regex", function(obj) {
-  return Object.prototype.toString.call(obj) === '[object RegExp]'
-})
-Is.define("buffer", function(obj) {
-  if (obj === null || typeof obj === 'undefined') {
-    return false
-  }
-  return !!(obj.constructor && obj.constructor.isBuffer && obj.constructor.isBuffer(obj))
-})
-Is.define("string", function(input) {
-  return "[object String]" === Object.prototype.toString.call(input) || typeof input === 'string'
-})
-Is.define("tag", function(type) {
-  let tags = {tag: true, script: true, style: true}
-  if (type.type) {
-    type = type.type
-  }
-  return tags[type] || false
-})
-Is.define("html", function(str) {
-  // Faster than running regex, if str starts with `<` and ends with `>`, assume it's HTML
-  if (str.charAt(0) === '<' && str.charAt(str.length - 1) === '>' && str.length >= 3) {
-    return true
-  }
-  // Run the regex
-  let match = quickExpr.exec(str)
-  return !!(match && match[1])
-})
-Is.define("validEntityCode", function(c) {
-  /*eslint no-bitwise:0*/
-  // broken sequence
-  if (c >= 0xD800 && c <= 0xDFFF) {
-    return false
-  }
-  // never used
-  if (c >= 0xFDD0 && c <= 0xFDEF) {
-    return false
-  }
-  if ((c & 0xFFFF) === 0xFFFF ||(c & 0xFFFF) === 0xFFFE) {
-    return false
-  }
-  // control codes
-  if (c >= 0x00 && c <= 0x08) {
-    return false
-  }
-  if (c === 0x0B) {
-    return false
-  }
-  if (c >= 0x0E && c <= 0x1F) {
-    return false
-  }
-  if (c >= 0x7F && c <= 0x9F) {
-    return false
-  }
-  // out of range
-  if (c > 0x10FFFF) {
-    return false
-  }
-  return true
-})
-Is.define("space", function(code) {
-  switch(code) {
-    case 0x09:
-    case 0x20:
-    return true
-  }
-  return false
-})
-// Zs(unicode class) || [\t\f\v\r\n]
-Is.define("whiteSpace", function(code) {
-  if (code >= 0x2000 && code <= 0x200A) {
-    return true
-  }
-  switch(code) {
-    case 0x09: // \t
-    case 0x0A: // \n
-    case 0x0B: // \v
-    case 0x0C: // \f
-    case 0x0D: // \r
-    case 0x20:
-    case 0xA0:
-    case 0x1680:
-    case 0x202F:
-    case 0x205F:
-    case 0x3000:
-    return true
-  }
-  return false
-})
-Is.define("promise", function(value) {
-  return typeof value === 'object' && typeof value.then === 'function'
-})
-Is.define("array", function(arg) {
-  if (Array.isArray) {
-    return Array.isArray(arg)
-  }
-  return Object.prototype.toString.call(obj) === "[object Array]"
-})
-Is.define("boolean", function(arg) {
-  return typeof arg === 'boolean'
-})
-Is.define("null", function(arg) {
-  return arg === null
-})
-Is.define("nullOrUndefined", function(arg) {
-  return arg == null
-})
-Is.define("number", function(arg) {
-  return typeof arg === 'number'
-})
-Is.define("symbol", function(arg) {
-  return typeof arg === 'symbol'
-})
-Is.define("undefined", function(arg) {
-  return arg === void 0
-})
-Is.define("date", function(d) {
-  return Object.prototype.toString.call(obj) === "[object Date]"
-})
-Is.define("function", function(arg) {
-  return typeof arg === 'function'
-})
-Is.define("absolute", function(aPath) {
-  return aPath.charAt(0) === '/' || urlRegexp.test(aPath)
-})
-Is.define("numeric", function(i) {
-  return "" !== i && +i == i && (String(i) === String(+i) || !/[^\d.]+/.test(i))
-})
-Is.define("identifier", function(str) {
-  return /^[a-z$_][a-z$_0-9]*$/i.test(str)
-})
-Is.define("protoString", function(s) {
-  if (!s) {
-    return false
-  }
-  let length = s.length
-  if (length < 9 /* "__proto__".length */) {
-    return false
-  }
-  if ( s.charCodeAt(length - 1) !== 95  /* '_' */ 
-  || s.charCodeAt(length - 2) !== 95  /* '_' */ 
-  || s.charCodeAt(length - 3) !== 111 /* 'o' */ 
-  || s.charCodeAt(length - 4) !== 116 /* 't' */ 
-  || s.charCodeAt(length - 5) !== 111 /* 'o' */ 
-  || s.charCodeAt(length - 6) !== 114 /* 'r' */ 
-  || s.charCodeAt(length - 7) !== 112 /* 'p' */ 
-  || s.charCodeAt(length - 8) !== 95  /* '_' */ 
-  || s.charCodeAt(length - 9) !== 95  /* '_' */) {
-    return false
-  }
-  for(let i = length - 10; i >= 0; i--) {
-    if (s.charCodeAt(i) !== 36 /* '$' */) {
-      return false
-    }
-  }
-  return true
-})
-Is.define("type", function(value) {
-  if (value === undefined) {
-    return 'undefined';
-  }
-  else if (value === null) {
-    return 'null';
-  }
-  else if (Buffer.isBuffer(value)) {
-    return 'buffer';
-  }
-  return Object.prototype.toString.call(value)
-  .replace(/^\[.+\s(.+?)]$/, '$1')
-  .toLowerCase();
-})
-Is.define("stringMap", function(obj) {
-  let map;
-  if (typeof obj === "object") {
-    map = {};
-    for (let field in obj) {
-      let property = obj[field];
-      let propertyType = typeof property;
-      if (propertyType !== "string") {
-        if (property && typeof property.toString === "function") {
-          property = property.toString();
+}
+Object.defineProperty(Object.prototype, "define", {
+    configurable: true,
+    enumerable: false,
+    writable: true,
+    value: function(name, value) {
+        if (Object[name]) {
+            delete Object[name]
         }
-        else {
-          property = "invalid property type: " + propertyType;
-        }
-      }
-      map[field] = property.trim(0, Util.MAX_PROPERTY_LENGTH);
+        Object.defineProperty(this, name, {
+            configurable: true,
+            enumerable: false,
+            writable: true,
+            value: value
+        })
+        return this
     }
-  }
-  else {
-    Logging.info("Invalid properties dropped from payload");
-  }
-  return map;
 })
-String.prototype.define("compare", function(str) {
-  if (this === str) {
-    return 0
-  }
-  if (this === null) {
-    return 1; // str !== null
-  }
-  if (str === null) {
-    return -1; // this !== null
-  }
-  if (this > str) {
-    return 1
-  }
-  return -1
-})
-Array.define("range", function(count, prefix, suffix) {
-  let ret = new Array(count)
-  for(let i = 0; i < count; ++i) {
-    ret[i] = prefix + i + suffix
-  }
-  return ret
-})
-Array.prototype.define("postpend", function withAppended(target, appendee) {
-  let len = target.length
-  let ret = new Array(len + 1)
-  let i
-  for(i = 0; i < len; ++i) {
-    ret[i] = target[i]
-  }
-  ret[i] = appendee
-  return ret
-})
-Error.prototype.define("throw", function() {
-  throw this
-})
-String.prototype.define("escape", function() {
-  return this.replace(/([/\\^$*+?{}[\]().|])/g, "\\$1")
-})
-String.prototype.define("repeat", function(num) {
-  let result = ''
-  for(let i = 0; i < num; i++) {
-    result += this
-  }
-  return result
-})
-Array.define("equal", function(a, b) {
-  if (a.length !== b.length) {
-    return false
-  }
-  for(let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) {
-      return false
-    }
-  }
-  return true
-})
-Array.prototype.define("equals", function(b) {
-  let a = this
-  if (a.length !== b.length) {
-    return false
-  }
-  for(let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) {
-      return false
-    }
-  }
-  return true
-})
-String.prototype.define("trimChars", function(chars) {
-  let str = this
-  let start = 0
-  let end = str.length - 1
-  while(chars.indexOf(str.charAt(start)) >= 0) {
-    start++
-  }
-  while(chars.indexOf(str.charAt(end)) >= 0) {
-    end--
-  }
-  return str.slice(start, end + 1)
-})
-String.prototype.define("toProperCase", function() {
-  return this.charAt(0).toUpperCase() + this.slice(1)
-})
-String.prototype.define("toCamelCase", function() {
-  return this.replace(/[_.-](\w|$)/g, function(_, x) {
-    return x.toUpperCase()
-  })
-})
-String.prototype.define("toCssCase", function() {
-  return this.replace(/[A-Z]/g, '-$&').toLowerCase()
-})
-
-
-/* 
-Object.prototype.define("assign", function(*//*from1, from2, from3, ...*//*) {
-  let obj = this
-  let sources = Array.prototype.slice.call(arguments, 1)
-  sources.forEach(function(source) {
-    if (!source) {
-      return
-    }
-    if (typeof source !== 'object') {
-      throw new TypeError(source + 'must be object')
-    }
-    Object.keys(source).forEach(function(key) {
-      obj[key] = source[key]
-    })
-  })
-  return obj
-})
-*/
-
-Array.prototype.define("replaceAt", function(pos, newElements) {
-  return [].concat(this.slice(0, pos), newElements, this.slice(pos + 1))
-})
-String.prototype.define("kludge", function caseKludge(fuzz = false) {
-  let input = this
-  let output = input.split("").map((s, index, array) => {
-    if (/[A-Z]/.test(s)){
-      const output = "[" + s + s.toLowerCase() + "]";
-      const prev   = array[index - 1];
-      if (fuzz && prev && /[a-z]/.test(prev))
-      return "[\\W_\\S]*" + output;
-      return output;
-    }
-    if (/[a-z]/.test(s))     return "[" + s.toUpperCase() + s + "]";
-    if (!fuzz)               return s.replace(/([/\\^$*+?{}[\]().|])/g, "\\$1");
-    if ("0" === s)           return "[0Oo]";
-    if (/[\W_ \t]?/.test(s)) return "[\\W_ \\t]?";
-    return s;
-  }).join("");
-  if (fuzz)
-  output = output.replace(/\[Oo\]/g, "[0Oo]");
-  return output.replace(/(\[\w{2,3}\])(\1+)/g,(match, first, rest) => {
-    return first + "{" +((rest.length / first.length) + 1) + "}";
-  });
-})
-Array.prototype.define("collect", function(refs = null) {
-  let input = this
-  refs = refs || new WeakSet();
-  input = "string" === typeof input ? [input] : refs.add(input) && Array.from(input);
-  const output = [];
-  for(const value of input){
-    if (!value) continue;
-    switch(typeof value){
-      case "string":
-      output.push(...value.split(/\s+/));
-      break;
-      case "object":
-      if (refs.has(value)) continue;
-      refs.add(value);
-      output.push(...collectStrings(value, refs));
-    }
-  }
-  return output;
-})
-RegExp.prototype.define("uncapture", function() {
-  let pattern = this
-  const source = pattern.source
-  .split(/\((?!\?[=<!])/)
-  .map((segment, index, array) => {
-    if (!index) return segment;
-    return !/^(?:[^\\]|\\.)*\\$/.test(array[index - 1])
-    ? segment.replace(/^(?:\?:)?/, "(?:")
-    : segment.replace(/^/, "(");
-  })
-  .join("");
-  return new RegExp(source, pattern.flags);
-})
-RegExp.prototype.define("fuzzy", function(format = RegExp) {
-  let input = this
-  if ("[object String]" !== Object.prototype.toString.call(input)) {
-    return input;
-  }
-  const output = input
-  .replace(/([A-Z])([A-Z]+)/g,(a, b, c) => b + c.toLowerCase())
-  .split(/\B(?=[A-Z])|[-\s]/g)
-  .map(i => i.replace(/([/\\^$*+?{}[\]().|])/g, "\\$1?"))
-  .join("[\\W_ \\t]?")
-  .replace(/[0Oo]/g, "[0o]");
-  // Author's requested the regex source, return a string
-  if (String === format) {return output;}
-  // Otherwise, crank the fuzz
-  return new RegExp(output, "i");
-})
-Date.prototype.define("wait", function(delay = 100) {
-  return new Promise(resolve => {
-    setTimeout(() => resolve(), delay);
-  });
-})
-String.prototype.define("escape", function() {
-  return this.replace(/[.?*+^$[\]\\(){}|-]/g, '\\$&');
-})
-String.prototype.define("slug", function() {
-  return this.toLowerCase().replace(/ +/g, '-').replace(/[^-\w]/g, '');
-})
-// String.prototype.define("nativeReplace", String.prototype.replace)
-// String.prototype.define("replace", function() {
-//     // regexp|substr, newSubstr|function
-//     if (arguments.length === 1) {
-//         return this.nativeReplace(arguments[0], "")
-//     }
-//     if (arguments.length === 2) {
-//         return this.nativeReplace(arguments[0], arguments[1])
-//     }
-// })
-Math.random32 = function() {
-  return (0x100000000 * Math.random()) | 0;
-}
-Math.guid = function() {
-  let hexValues = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"];
-  // c.f. rfc4122 (UUID version 4 = xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx)
-  let oct = "", tmp;
-  for (let a = 0; a < 4; a++) {
-    tmp = Util.random32();
-    oct +=
-    hexValues[tmp & 0xF] +
-    hexValues[tmp >> 4 & 0xF] +
-    hexValues[tmp >> 8 & 0xF] +
-    hexValues[tmp >> 12 & 0xF] +
-    hexValues[tmp >> 16 & 0xF] +
-    hexValues[tmp >> 20 & 0xF] +
-    hexValues[tmp >> 24 & 0xF] +
-    hexValues[tmp >> 28 & 0xF];
-  }
-  // "Set the two most significant bits (bits 6 and 7) of the clock_seq_hi_and_reserved to zero and one, respectively"
-  let clockSequenceHi = hexValues[8 + (Math.random() * 4) | 0];
-  return oct.substr(0, 8) + "-" + oct.substr(9, 4) + "-4" + oct.substr(13, 3) + "-" + clockSequenceHi + oct.substr(16, 3) + "-" + oct.substr(19, 12);
-};
-Date.define("toTimeSpan", function(totalms) {
-  if (isNaN(totalms) || totalms < 0) {
-    totalms = 0;
-  }
-  let ms = "" + totalms % 1000;
-  let sec = "" + Math.floor(totalms / 1000) % 60;
-  let min = "" + Math.floor(totalms / (1000 * 60)) % 60;
-  let hour = "" + Math.floor(totalms / (1000 * 60 * 60)) % 24;
-  ms = ms.length === 1 ? "00" + ms : ms.length === 2 ? "0" + ms : ms;
-  sec = sec.length < 2 ? "0" + sec : sec;
-  min = min.length < 2 ? "0" + min : min;
-  hour = hour.length < 2 ? "0" + hour : hour;
-  return hour + ":" + min + ":" + sec + "." + ms;
-})
-Array.prototype.define("toObject", function(options) {
-  let source = this
-  let obj = options && options.plainObjects ? Object.create(null) : {};
-  for(let i = 0; i < source.length; ++i) {
-    if (typeof source[i] !== 'undefined') {
-      obj[i] = source[i];
-    }
-  }
-  return obj;
-})
-Array.prototype.define("first", function() {
-  return this[0]
-})
-Array.prototype.define("last", function() {
-  return this[this.length-1]
-})
-Array.prototype.define("swap", function(a, b) {
-  // this[a] = this.splice(b, 1, this[a])[0]; // slower but prettier
-  let tmp = this[a];
-  this[a] = this[b];
-  this[b] = tmp;
-  return this;
-});
-Array.prototype.define("nativeSort", Array.prototype.sort)
-Object.prototype.dump = function (indent) {
-  let obj = this;
-  let result = "";
-  if (indent == null) indent = "";
-  for (let property in obj) {
-    let value = obj[property];
-    if (typeof value == 'string') value = "'" + value + "'";
-    else if (typeof value == 'object') {
-      if (value instanceof Array) {
-        value = "[" + value + "]";
-      } 
-      else {
-        let od = DumpObjectIndented(value, indent + "  ");
-        value = "\n" + indent + "{\n" + od + "\n" + indent + "}";
-      }
-    }
-    result += indent + "'" + property + "' : " + value + ",\n";
-  }
-  return result.replace(/,\n$/, "");
-}
-Array.prototype.define("sort", function(attribute, caseInsensitive) {
-  return this.nativeSort(new Intl.Collator(undefined, {numeric: true, sensitivity: 'base'}).compare)
-})  
-String.prototype.replaceAll = function(search, replacement) {
-  let target = this;
-  return target.replace(new RegExp(search, 'g'), replacement);
-  // return target.split(search).join(replacement);
-};
-String.prototype.define("nativeReplace", String.prototype.replace)
-String.prototype.define("replace", function() {
-  if (arguments.length < 2) {
-    return this.nativeReplace(arguments[0], "")
-  }
-  return this.nativeReplace(arguments[0], arguments[1])
-})
-global.define("end", function(){
-  process.exit()
-})
-global.define("exit", function(){
-  process.exit()
-})
-Date.define("display", function() {
-  let d = new Date()
-  return d.getDate() + "-" + (d.getMonth() + 1) + "-" + d.getFullYear()
-})
-Array.prototype.define("chunk", function(size) {
-  let R = []
-  for (let i = 0; i < this.length; i+=size) {
-    R.push(this.slice(i, i + size))
-  }
-  return R
-})
-String.prototype.define("isNumeric", function() {
-  return !isNaN(this)
-})
-Number.prototype.define("isNumeric", function() {
-  return !isNaN(this)
-})
-String.prototype.define("includesAny", function(arr) {
-  return arr.some(thing => this.includes(thing))
-})
-String.prototype.define("matchesAny", function(regexes) {
-  // return regexes.some(regex => regex.test(this))
-  return haystack.some(function(hay) {
-    if (Is.regex(hay)) return hay.test(this)
-    if (Is.string(hay)) return hay.includes(this)
-  })
-})
-Array.prototype.define("testAll", function(regex) {
-  return arr.some(thing => regex.test(thing))
-})
-Array.prototype.define("compact", function() {
-  return this.filter(Boolean)
-})
-Array.prototype.define("clean", function() {
-  return this.filter(Boolean)
-})
-Array.prototype.define("everyNth", function(nth) {
-  return this.filter((e, i) => i % nth === nth - 1)
-})
-Array.prototype.define("toCSV", function(delimiter = ',') {
-  return this.map(v => v.map(x => (isNaN(x) ? `"${x.replace(/"/g, '""')}"` : x)).join(delimiter)).join('\n');
-})
-Array.prototype.define("pluck", function(indices) {
-  let i, result = []
-  for(i = 0; i < indices.length; i++) {
-    result.push(this[indices[i]])
-  }
-  return result
-})
-Array.prototype.define("fill", function(value) {
-  
-  // Steps 1-2.
-  if (this == null) {
-    throw new TypeError('this is null or not defined');
-  }
-  
-  let O = Object(this);
-  
-  // Steps 3-5.
-  let len = O.length >>> 0;
-  
-  // Steps 6-7.
-  let start = arguments[1];
-  let relativeStart = start >> 0;
-  
-  // Step 8.
-  let k = relativeStart < 0 ?
-  Math.max(len + relativeStart, 0) :
-  Math.min(relativeStart, len);
-  
-  // Steps 9-10.
-  let end = arguments[2];
-  let relativeEnd = end === undefined 
-  ? len 
-  : end >> 0;
-  
-  // Step 11.
-  let final = relativeEnd < 0 
-  ? Math.max(len + relativeEnd, 0) 
-  : Math.min(relativeEnd, len);
-  
-  // Step 12.
-  while (k < final) {
-    if (Is.function(value)) {
-      O[k] = value(k);
-    }
-    else {
-      O[k] = value;
-    }
-    k++;
-  }
-  
-  // Step 13.
-  return O;
-})
-Math.define("nativeRandom", Math.random)
-Math.define("random", function() {
-  let min, max, step
-  if (arguments.length === 0) {
-    min = 0
-    max = 1
-  }
-  if (arguments.length === 1) {
-    min = 0
-    max = arguments[0]
-  }
-  if (arguments.length === 2) {
-    min = arguments[0]
-    max = arguments[1]
-  }
-  min = Math.ceil(min);
-  max = Math.floor(max);
-  return Math.floor(Math.nativeRandom() * (max - min + 1)) + min; //The maximum is inclusive and the minimum is inclusive 
-})
-JSON.toCSV = function(arr, columns, delimiter = ',') {
-  return [
-    columns.join(delimiter),
-    ...arr.map(obj =>
-      columns.reduce(
-        (acc, key) => `${acc}${!acc.length ? '' : delimiter}"${!obj[key] ? '' : obj[key]}"`,
-        ''
-      )
-    )
-  ].join('\n')
-}
-const partition = (arr, fn) =>
-arr.reduce(
-  (acc, val, i, arr) => {
-    acc[fn(val, i, arr) ? 0 : 1].push(val);
-    return acc;
-  },
-  [[], []]
-);
-const permutations = arr => {
-  if (arr.length <= 2) return arr.length === 2 ? [arr, [arr[1], arr[0]]] : arr;
-  return arr.reduce(
-    (acc, item, i) =>
-    acc.concat(
-      permutations([...arr.slice(0, i), ...arr.slice(i + 1)]).map(val => [item, ...val])
-    ),
-    []
-  );
-};
-fs.define("getFile", function(path) {
-  // .replace(/[^\w\s\.,\(\);\/]/gi, "")
-  return fs.readFileSync(path, 'utf8')//.split(/\r?\n/).map(x => x.trim())
-})
-fs.define("getFileAsLines", function(path) {
-  // .replace(/[^\w\s\.,\(\);\/]/gi, "")
-  return fs.readFileSync(path, 'utf8').split(/\r?\n/)//.map(x => x.trim())
-})
-fs.define("setFile", function(path, contents) {
-  // mkdirp(path.split("/").slice(0, -1).join("/"))
-  return fs.writeFileSync(path, contents)
-})
-fs.define("copyFile", function(source, target) {
-  return fs.setFile(target, fs.getFile(source))
-})
-fs.define("isFile", function(pathItem) {
-  return !!path.extname(pathItem);
-})
-fs.define("isDir", function(path) {
-  try {
-    let stat = fs.lstatSync(path);
-    return stat.isDirectory();
-  } catch (e) {
-    return false;
-  }
-})
-fs.define("setDir", function(handle) {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, {recursive: true});
-  }
-})
-fs.define("clearDir", function(handle) {
-  if (fs.existsSync(dir)) {
-    fs.readdirSync(dir).forEach(f => fs.rmSync(`${dir}/${f}`));
-  }
-})
-fs.define("getFolder", function(path) {
-  try {
-    return fs.readdirSync(path, 'utf8')
-  }
-  catch (e) {
-    return []
-  }
-})
-fs.define("walkSync", function(dir, filelist, depth=1) {
-  filelist = filelist || []
-  let files = fs.getFolder(dir)
-  files.each(function(file) {
-    filelist.push(dir + '/' + file)
-    if (depth === 0) return
-    // // if (file.includes("node_modules")) return
-    if (fs.statSync(dir + '/' + file).isDirectory()) {
-      filelist.concat(fs.walkSync(dir + '/' + file, filelist, depth-1))
-    }
-  })
-  return filelist;
-})
-module.exports = {Is}
+// All functions and prototype extensions are now available globally.
